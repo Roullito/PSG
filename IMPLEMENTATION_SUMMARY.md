@@ -2,7 +2,7 @@
 
 ## ✅ Completed Features
 
-### Backend (FastAPI + MySQL)
+### Backend (FastAPI + PostgreSQL)
 
 #### Database Models ✅
 - [x] Season (label, start_date, end_date)
@@ -111,9 +111,9 @@
 ### Infrastructure ✅
 
 #### Docker Setup ✅
-- [x] docker-compose.yml (MySQL + API)
+- [x] docker-compose.yml (PostgreSQL + API)
 - [x] Dockerfile for FastAPI
-- [x] MySQL with health checks
+- [x] PostgreSQL with health checks
 - [x] Auto-migration on startup
 - [x] Auto-seed metrics on startup
 - [x] Volume persistence
@@ -224,7 +224,7 @@ Total Lines: ~7,000+
 
 ### Tech Constraints ✅
 - [x] Backend: Python FastAPI
-- [x] Database: MySQL 8.0
+- [x] Database: PostgreSQL 16
 - [x] ORM: SQLAlchemy 2.0
 - [x] Migrations: Alembic
 - [x] Frontend: React + Vite
@@ -296,7 +296,7 @@ cd frontend && npm install && npm run dev
 - **Database Tables**: 8
 - **Seeded Metrics**: 45
 - **Test Cases**: 5+
-- **Docker Containers**: 2 (MySQL + API)
+- **Docker Containers**: 2 (PostgreSQL + API)
 - **Documentation Pages**: 3 (README + guides)
 
 ## ✨ Quality Features
