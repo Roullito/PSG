@@ -6,7 +6,7 @@ A full-stack football analytics application for managing teams, players, matches
 
 ### Backend
 - **Framework**: FastAPI (Python)
-- **Database**: MySQL 8.0
+- **Database**: PostgreSQL 16
 - **ORM**: SQLAlchemy 2.0
 - **Migrations**: Alembic
 - **API Docs**: OpenAPI/Swagger (auto-generated at `/docs`)
@@ -47,18 +47,18 @@ cp .env.example .env
 ### 2. Start with Docker Compose
 
 ```bash
-# Build and start all services (MySQL + API)
-docker-compose up -d
+# Build and start all services (PostgreSQL + API)
+docker compose up -d --build
 
 # Check logs
-docker-compose logs -f api
+docker compose logs -f api
 
 # The API will be available at http://localhost:8000
 # API docs at http://localhost:8000/docs
 ```
 
 The startup script automatically:
-- Waits for MySQL to be ready
+- Waits for PostgreSQL to be ready
 - Runs Alembic migrations
 - Seeds metric definitions
 - Starts the API server
@@ -525,7 +525,7 @@ source venv/bin/activate  # or `venv\Scripts\activate` on Windows
 pip install -r requirements.txt
 
 # Set environment variables
-export DATABASE_URL="mysql+pymysql://veo_user:veo_password@localhost:3306/veo_db"
+export DATABASE_URL="postgresql+psycopg://veo_user:veo_password@postgres:5432/veo_db"
 
 # Run migrations
 alembic upgrade head
@@ -551,6 +551,157 @@ Edit `app/seed.py` and add to `PLAYER_METRICS` or `TEAM_METRICS` list, then run:
 ```bash
 python -m app.seed
 ```
+
+---
+
+## 🧠 Module VEO — Architecture DB & Garanties (V1)
+
+Cette section décrit les choix structurants du module VEO V1, ainsi que les garanties mises en place côté base de données et API.
+
+---
+
+## 🎯 Philosophie V1
+
+Le module VEO V1 est conçu pour :
+
+* **Remplacer la saisie Excel** par une saisie manuelle structurée
+* **Stocker uniquement des données brutes (raw)** en base
+* **Calculer les métriques dérivées à la demande** côté backend (analytics)
+* Garantir la **cohérence des données**, même en cas d’accès direct à la base
+
+➡️ Principe fondamental :
+
+> **Les métriques dérivées ne sont jamais stockées en base.**
+
+---
+
+## 🗄️ Base de données
+
+* **SGBD** : PostgreSQL 16+
+* **ORM** : SQLAlchemy 2.0
+* **Migrations** : Alembic
+* **Mode d’exécution** : Docker-first
+
+### Tables principales
+
+* `seasons`, `teams`, `players`, `matches`
+* `match_player_participations`
+* `metric_definitions`
+* `team_match_metric_values`
+* `player_match_metric_values`
+
+Le modèle repose sur un **schéma EAV maîtrisé**, avec :
+
+* définitions de métriques centralisées (`metric_definitions`)
+* valeurs stockées par match / joueur / équipe
+* support OWN / OPPONENT pour les stats équipe
+
+---
+
+## 🔒 Garanties de cohérence (DB-level)
+
+Même si l’API applique déjà des validations, des **protections supplémentaires existent au niveau PostgreSQL**.
+
+### 1️⃣ Interdiction de stocker des métriques dérivées
+
+Un **trigger PostgreSQL** empêche toute insertion ou mise à jour d’une métrique marquée `is_derived = true`.
+
+✔️ Protège contre :
+
+* insertions SQL manuelles
+* bugs applicatifs futurs
+* mauvaises migrations
+
+Fonction utilisée :
+
+* `prevent_derived_metric_values()`
+
+Triggers actifs :
+
+* `trg_prevent_derived_team_values`
+* `trg_prevent_derived_player_values`
+
+---
+
+### 2️⃣ Validation des métriques de type PERCENT (0–100)
+
+Un **trigger PostgreSQL dédié** empêche toute valeur hors plage `[0, 100]` pour les métriques de type `PERCENT`.
+
+✔️ Validation assurée :
+
+* côté backend (API)
+* **et côté base** (DB hardening)
+
+Fonction utilisée :
+
+* `enforce_percent_range()`
+
+Triggers actifs :
+
+* `trg_enforce_percent_team_values`
+* `trg_enforce_percent_player_values`
+
+---
+
+## ⚡ Performance & Indexation
+
+Des indexes spécifiques ont été ajoutés pour les cas d’usage analytics :
+
+### Index “métier” (V1)
+
+* `matches(team_id, season_id, date)`
+* `players(team_id)`
+* `match_player_participations(match_id)`
+* `match_player_participations(player_id)`
+* `team_match_metric_values(metric_id, match_id, side)`
+* `player_match_metric_values(metric_id, match_id)`
+* `player_match_metric_values(player_id, match_id)`
+
+### Index partiel (optimisation V2 anticipée)
+
+Un **index partiel PostgreSQL** existe pour accélérer les dashboards :
+
+* `team_match_metric_values(metric_id, match_id) WHERE side = 'OWN'`
+
+➡️ Optimisé pour les lectures analytics courantes (stats équipe).
+
+---
+
+## 🧪 Tests end-to-end (preuve fonctionnelle V1)
+
+Un **script E2E reproductible** valide le fonctionnement complet du module VEO :
+
+* création saison / équipe / joueur
+* création match avec métadonnées VEO
+* saisie participations
+* saisie métriques équipe & joueur
+* lecture analytics avec métriques dérivées
+* vérification que les dérivées **ne sont pas stockées**
+
+📄 Script :
+
+```bash
+scripts/e2e_veo_v1.sh
+```
+
+Ce script est conçu pour :
+
+* être rejouable localement
+* servir de base pour une future CI
+* garantir que la règle “raw-only” est respectée
+
+---
+
+## ✅ État du module VEO V1
+
+✔️ Base de données prête
+✔️ API fonctionnelle
+✔️ Règles métier sécurisées (API + DB)
+✔️ Analytics calculées à la demande
+✔️ Remplacement Excel techniquement validé
+
+➡️ Le module est **prêt pour la saisie manuelle et l’intégration frontend**.
+
 
 ## 📄 License
 
