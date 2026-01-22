@@ -18,7 +18,7 @@ docker-compose logs -f api
 - Frontend: http://localhost:5173
 - API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
-- MySQL: localhost:3306
+- Database: internal (PostgreSQL via Docker network)
 
 ## 📁 Project Structure
 
@@ -98,7 +98,7 @@ cd frontend && npm run dev                    # Start dev server
 cd frontend && npm run build                  # Build for production
 
 # Database
-docker-compose exec mysql mysql -u veo_user -pveo_password veo_db
+docker compose exec -it postgres psql -U veo_user -d veo_db
 ```
 
 ## 📐 Metric Categories
@@ -161,7 +161,7 @@ curl http://localhost:8000/metrics | jq length
 
 ```bash
 # .env
-DATABASE_URL=mysql+pymysql://user:pass@host:3306/db
+DATABASE_URL=postgresql+psycopg://user:pass@host:5432/db
 API_HOST=0.0.0.0
 API_PORT=8000
 CORS_ORIGINS=http://localhost:5173

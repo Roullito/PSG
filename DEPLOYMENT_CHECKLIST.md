@@ -6,8 +6,8 @@ Use this checklist when deploying Veo Module V1 to production.
 
 ### Environment Setup
 - [ ] Create production `.env` file
-- [ ] Set strong `MYSQL_ROOT_PASSWORD`
-- [ ] Set strong `MYSQL_PASSWORD`
+- [ ] Set strong `POSTGRES_ROOT_PASSWORD`
+- [ ] Set strong `POSTGRES_PASSWORD`
 - [ ] Configure production `DATABASE_URL`
 - [ ] Set production `CORS_ORIGINS` (frontend URLs)
 - [ ] Review `API_HOST` and `API_PORT`
@@ -23,7 +23,7 @@ Use this checklist when deploying Veo Module V1 to production.
 - [ ] Configure logging
 
 ### Database
-- [ ] Verify MySQL version (8.0+)
+- [ ] Verify POSTGRES version (16+)
 - [ ] Test database connection
 - [ ] Run migrations: `alembic upgrade head`
 - [ ] Seed metrics: `python -m app.seed`
@@ -124,7 +124,7 @@ server {
 ### Verification
 - [ ] API responds at production URL
 - [ ] Frontend loads correctly
-- [ ] Login to MySQL and verify tables exist
+- [ ] Login to POSTGRES and verify tables exist
 - [ ] Test creating a season
 - [ ] Test creating a team
 - [ ] Test creating a player
@@ -160,11 +160,11 @@ server {
 
 ```bash
 # Database
-DATABASE_URL=mysql+pymysql://veo_user:STRONG_PASSWORD@mysql:3306/veo_db
-MYSQL_ROOT_PASSWORD=STRONG_ROOT_PASSWORD
-MYSQL_DATABASE=veo_db
-MYSQL_USER=veo_user
-MYSQL_PASSWORD=STRONG_PASSWORD
+DATABASE_URL=postgresql+psycopg://veo_user:veo_password@localhost:5432/veo_db
+POSTGRES_ROOT_PASSWORD=STRONG_ROOT_PASSWORD
+POSTGRES_DATABASE=veo_db
+POSTGRES_USER=veo_user
+POSTGRES_PASSWORD=STRONG_PASSWORD
 
 # API
 API_HOST=0.0.0.0
@@ -189,7 +189,7 @@ If deployment fails:
 docker-compose down
 
 # 2. Restore database from backup
-docker-compose exec mysql mysql -u root -p < backup.sql
+docker compose exec -T postgres psql -U veo_user -d veo_db < backup.sql
 
 # 3. Revert to previous version
 git checkout <previous-tag>
@@ -217,9 +217,11 @@ BACKUP_DIR="/backups/veo"
 mkdir -p $BACKUP_DIR
 
 # Backup database
-docker-compose exec -T mysql mysqldump \
-  -u veo_user -pveo_password veo_db \
-  > $BACKUP_DIR/veo_db_$DATE.sql
+docker compose exec -T postgres pg_dump \
+  -U veo_user \
+  -d veo_db \
+  -Fc \
+  > $BACKUP_DIR/veo_db_$DATE.dump
 
 # Compress
 gzip $BACKUP_DIR/veo_db_$DATE.sql
@@ -244,7 +246,7 @@ docker-compose ps
 
 # View logs
 docker-compose logs -f api
-docker-compose logs -f mysql
+docker-compose logs -f postgres
 
 # Check API health
 curl http://localhost:8000/health
@@ -256,12 +258,8 @@ docker-compose exec api python -c "from app.db.session import engine; engine.con
 docker system df
 
 # Database size
-docker-compose exec mysql mysql -u veo_user -pveo_password \
-  -e "SELECT table_schema AS 'Database',
-      ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'Size (MB)'
-      FROM information_schema.tables
-      WHERE table_schema = 'veo_db'
-      GROUP BY table_schema;"
+docker compose exec -T postgres psql -U veo_user -d veo_db -c \
+"SELECT pg_size_pretty(pg_database_size('veo_db')) AS \"Size (MB)\";"
 ```
 
 ## Performance Tuning
@@ -282,7 +280,7 @@ CREATE INDEX idx_player_metrics_match_player ON player_match_metric_values(match
 ```yaml
 # docker-compose.yml
 services:
-  mysql:
+  postgres:
     deploy:
       resources:
         limits:
@@ -317,14 +315,14 @@ docker-compose exec api env | grep DATABASE
 
 ### Database connection errors
 ```bash
-# Check MySQL status
-docker-compose ps mysql
+# Check Postgres container status
+docker compose ps postgres
 
-# Check MySQL logs
-docker-compose logs mysql
+# Check Postgres logs
+docker compose logs postgres
 
-# Test connection
-docker-compose exec mysql mysql -u veo_user -pveo_password -e "SELECT 1"
+# Test connection (simple query)
+docker compose exec -T postgres psql -U veo_user -d veo_db -c "SELECT 1;"
 ```
 
 ### Migration errors

@@ -28,8 +28,8 @@ cp .env.example .env
 ### 2. Start Backend Services
 
 ```bash
-# Build and start MySQL database + API
-docker-compose up -d
+# Build and start PostgreSQL database + API
+docker compose up -d --build
 
 # Watch logs to ensure everything starts correctly
 docker-compose logs -f api
@@ -204,8 +204,8 @@ Go back to the Dashboard:
 ### Backend won't start
 
 ```bash
-# Check if MySQL is ready
-docker-compose logs mysql
+# Check if PostgreSQL is ready
+docker compose exec -T postgres pg_isready -U veo_user -d veo_db
 
 # Check API logs
 docker-compose logs api
@@ -292,8 +292,8 @@ docker-compose down
 # View API logs
 docker-compose logs -f api
 
-# Access MySQL
-docker-compose exec mysql mysql -u veo_user -pveo_password veo_db
+# Access PostgreSQL
+docker compose exec -it postgres psql -U veo_user -d veo_db
 
 # Access Python shell
 docker-compose exec api python
@@ -320,7 +320,7 @@ docker-compose up -d
 - Check the logs: `docker-compose logs -f api`
 - Review API docs: http://localhost:8000/docs
 - Read the full README.md
-- Check database state: Use a MySQL client to connect to localhost:3306
+- Check database state: Use a PostgreSQL client to connect to localhost:3306
 
 ## Sample Data Script (Optional)
 
