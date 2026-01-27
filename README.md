@@ -27,6 +27,7 @@ A full-stack football analytics application for managing teams, players, matches
 - ✅ Bulk data entry for metrics and participations
 - ✅ Validation (percentages 0-100, no storing derived metrics)
 - ✅ Docker Compose setup for easy deployment
+- ✅ Match summary endpoint providing a single, Excel-like payload for frontend and export
 
 ## 📋 Prerequisites
 
@@ -204,6 +205,28 @@ GET    /analytics/players/leaderboard
        &season_id={id}
        &top_n={10}
 ```
+
+### Match Summary (Excel replacement)
+
+```http
+GET /matches/{id}/summary
+```
+
+This endpoint returns a **single, structured payload** containing:
+
+* match metadata (including VEO fields)
+* player participations
+* team metrics (OWN / OPPONENT)
+* player metrics as an Excel-like grid (players × metrics)
+
+It is designed to:
+
+* replace manual Excel aggregation
+* serve as the canonical payload for the frontend (Phase 2)
+* act as the base for CSV/Excel export (Phase 3)
+
+No derived metrics are computed here — only raw data.
+
 
 ## 📝 Sample API Payloads
 
@@ -700,8 +723,8 @@ Ce script est conçu pour :
 ✔️ Analytics calculées à la demande
 ✔️ Remplacement Excel techniquement validé
 
-➡️ Le module est **prêt pour la saisie manuelle et l’intégration frontend**.
-
+➡️ Le module est **prêt pour la saisie manuelle frontend** et peut déjà être utilisé
+comme **source unique de vérité pour remplacer les fichiers Excel existants**.
 
 ## 📄 License
 
