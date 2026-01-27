@@ -723,8 +723,10 @@ Ce script est conçu pour :
 ✔️ Analytics calculées à la demande
 ✔️ Remplacement Excel techniquement validé
 
+
 ➡️ Le module est **prêt pour la saisie manuelle frontend** et peut déjà être utilisé
 comme **source unique de vérité pour remplacer les fichiers Excel existants**.
+
 
 ## 📄 License
 
